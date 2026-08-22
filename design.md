@@ -1,97 +1,245 @@
-# Design Reference — next-level.gg
+# Kai Gaming — Design Guide
 
-A teardown of the Next Level gaming-cafe website, captured by examining its live HTML and stylesheet (`css/main.css`). Use this as a design reference — it is **not** how the current KaiGaming codebase is built (KaiGaming is React + Tailwind neobrutalist; this site is Bulma + Poppins, dark/neon/glassmorphism).
+> **Style:** Dark gaming aesthetic with **neobrutalist bones** (chunky bordered cards, hard offset shadows, big tight type — recolored dark, not bright).
+> **Status:** v2 — recolored to the Kai Gaming palette. The neobrutalist *structure* is kept; the bright flat palette from v1 is replaced by the dark Kai palette below.
+> **Reference:** `/Ref` (Gumroad = neobrutalist structure; Next Level GG = dark esports look, used lightly; real cafe photos + Kai logo palette = colors/mood).
 
-## Tech Stack (for context)
+---
 
-- **CSS framework:** Bulma v0.9.4 (utility + component classes: `.section`, `.hero`, `.columns`, `.button`, `.navbar`, `.tabs`)
-- **Carousel:** tiny-slider 2.9.4 (`.tns-*` classes, hero + hideouts sliders)
-- **Icons:** Google Material Icons + Material Icons Outlined (`<i class="material-icons">`)
-- **Font:** Poppins (Google Fonts), weights 200–900 + italic 300
+## 1. Style Philosophy
 
-## Overall Aesthetic
+Neobrutalism is *confident, loud, and honest*. Nothing is hidden or softened. The look is built from a few hard rules applied relentlessly:
 
-Dark, cinematic, high-energy esports vibe. Full-bleed dark background images per section, oversized display typography, floating rotated game-cover cards, glassmorphism cards (blurred translucent panels), and a single hot-red accent used sparingly for CTAs and highlights. Mood: premium gaming lounge, competitive, bold.
+1. **Hard edges & solid borders** — everything meaningful sits inside a thick, dark outline.
+2. **Solid offset shadows** — drop shadows are hard (no blur, no opacity fade), offset down-right, in a solid color. This gives the "sticker slapped on the page" feel.
+3. **Flat, saturated color blocks** — no gradients, no soft glows. Big rectangles of pure color.
+4. **Oversized, tight typography** — headings are huge, bold, and low-leading.
+5. **Playful, intentional imperfection** — badges/stickers rotated a few degrees, characters, chunky arrows.
+6. **High contrast everywhere** — dark sections against neon, black text on bright fills.
 
-## Color Palette
+If a choice makes the page feel *softer, more subtle, or more "corporate clean,"* it's probably wrong for this style.
 
-| Role | Hex | Notes |
-|---|---|---|
-| **Accent / primary (red)** | `#ec1e24` | Bulma `is-primary` override; CTAs, active pills, bullets, icon highlights |
-| Accent hover / darker red | `#d81218` | |
-| Near-black surface | `#1f1f1f` | dark panels/text |
-| Deep dark | `#191919`, `#121212`, `#000` | hero gradient stops |
-| Light text | `#f2f2f2` | body copy on dark |
-| Muted light | `rgba(242,242,242,0.7)` / `0.5` | subtitles, secondary copy |
-| Card muted gray | `#bab9b9` | service-card paragraph |
-| White | `#fff` | headings on dark, hero title |
+---
 
-Hero background gradient: `linear-gradient(#464646 0%, #191919 60.54%, #000 100%)`.
+## 2. Color System
 
-## Typography
+> ⚠️ Placeholder values — expect to swap these. What matters is the **roles**, not the exact hex.
 
-- **Family:** `"Poppins", sans-serif` everywhere.
-- **Hero title** (`.slide-1 .text .title`): weight **900**, white, `drop-shadow(0 0 .5rem black)`. Scales responsively: 50px → 70px → 110px → **150px**. Has a duplicated outlined-stroke layer (`-webkit-text-stroke: 2px #fff`, transparent fill) for the word "Gaming".
-- **Hero subtitle** (`.subtitle`): weight **800**, white, huge — 82px → 122px → 182px → **272px**, with `drop-shadow(0 1rem 2rem black)`.
-- **Hero eyebrow** (`h3`): 16px → 22px → 30px, capitalized, white.
-- **Section titles:** Bulma `.title` — default `hsl(0,0%,21%)`, weight 600, but overridden to `#fff` on dark sections.
-- **Tabs:** 16px, scaling to 24px on large screens.
-- **Body / cards:** 16px, weight 300 (light) for paragraphs; card headings weight 500 with dark text-shadow.
-- Mobile clamp: `.title.is-1` → 2rem, `.subtitle.is-4` → 1rem below 690px.
+### Core neutrals
+| Role | Token | Placeholder | Usage |
+|------|-------|-------------|-------|
+| Ink / border | `--color-ink` | `#000000` | All borders, outlines, shadows, body text |
+| Page dark | `--color-bg-dark` | `#0A0A0A` | Dark full-bleed sections |
+| Page light | `--color-bg-light` | `#FFFFFF` | Light sections, cards |
+| Surface | `--color-surface` | `#1A1A1A` | Cards on dark backgrounds |
 
-## Layout & Structure
+### Accent palette (flat, saturated)
+The Gumroad refs cycle through a small set of loud accents. Keep 4–6 hero colors and reuse them as full-bleed section backgrounds AND as fills for cards/badges.
 
-Single-page (`index.html`) built from stacked full-width `.section.is-medium` blocks, most with a dark background image. Max container width widens to **1690px** on very large screens (`≥1408px`).
+| Token | Placeholder | Notes |
+|-------|-------------|-------|
+| `--color-accent-1` | `#FF90E8` (pink) | Primary highlight / CTA fills |
+| `--color-accent-2` | `#FFC900` (yellow) | Callouts, sticker fills |
+| `--color-accent-3` | `#23A094` (teal) | Section blocks |
+| `--color-accent-4` | `#5B4BFF` (violet) | Buttons, links, section blocks |
+| `--color-accent-5` | `#8C3FBF` (purple) | Section blocks |
+| `--color-accent-6` | `#3B82F6` (blue) | Auth / provider buttons |
 
-Section order on the homepage:
+**Rules**
+- Accents are used at **full saturation** — never tinted or faded.
+- Text on an accent block is **black** (`--color-ink`), not gray.
+- Never place two accents adjacent without a black border or gap between them.
+- Full-bleed color sections alternate with dark sections down the page for rhythm.
 
-1. **Navbar** — fixed-top, dark. Brand logo scales 1.05 on hover (bouncy cubic-bezier). Active link goes bold. `navbar-start` pushed right (`margin-left:auto`). Responsive nav tightening between 1024–1215px to prevent wrapping.
-2. **Hero slider** (`#home`) — full height (`calc(100dvh - 101px)`), gradient bg, giant stacked title + subtitle, red brushstroke image (`red-mark.png`) behind text, and **5 floating game-cover cards** (warzone, dota, csgo, valorant, apex) absolutely positioned at varied rotations (−25° to +20°), each with `border-radius:20px` and a soft `box-shadow`. Cards hidden on mobile, scaled up progressively on larger breakpoints.
-3. **Hideouts / Cafés** (`#cafe`, `.section.hideouts`) — "Our Gaming Cafés". Carousel of location photos (`border-radius:1.5rem`, 300px, object-fit cover) + translucent info cards (`rgba(0,0,0,0.35)`, rounded 1.5rem) with Material icon + red icon color.
-4. **About** (`#about`, `.section.about`) — background image, glass `.about-card` (rounded 20px, `backdrop-filter:blur(14px)`). Vision + Mission cards.
-5. **Offerings / Services** (`#services`, `.section.offering`) — 8 glass `.service-card`s (Gaming Café, Consoles, Racing Simulators, VR, Streaming Room, PC Building, Hardware Rentals, Events). Icons are `filter:invert(1)` at `opacity:0.2`, scaling to 1.1 on card hover. Includes **pill tabs** (`.cs-tabs`) and tab cards.
-6. **Colosseum** (`.section.colosseum`, hidden by default) — Upcoming/Past/Tournaments tabs; events grid `repeat(2,1fr)` → `repeat(4,1fr)` at ≥640px.
-7. **Brand integrations** (`.section.brand`) — background image, white 18px text, custom red round bullet list.
-8. **Footer** — dark, logo hover-scale, social icons greyed (`filter:invert(9); opacity:.2`) turning into white circles on hover.
+---
 
-Other pages: **Rentals** (`rentals/`), **Community League** (`community-league/`), **Contact** (`contact.html`), **Franchise** (`franchise.html`).
+## 3. Typography
 
-## Components
+**Feel:** big, bold, geometric grotesque. Gumroad uses a tight, heavy sans. Good stand-ins: **Inter**, **Space Grotesk**, **Archivo**, or **Neue Haas Grotesk**. Pick one heavy family; the whole personality lives in headings.
+
+| Style | Size (desktop) | Weight | Leading | Notes |
+|-------|----------------|--------|---------|-------|
+| Display / Hero | `clamp(3rem, 6vw, 5.5rem)` | 800–900 | 1.0–1.05 | Very tight leading, may wrap 2–3 lines on purpose |
+| H1 | `2.5–3.5rem` | 800 | 1.1 | |
+| H2 (section) | `2–2.75rem` | 700–800 | 1.15 | Often centered above a section |
+| H3 (card title) | `1.1–1.35rem` | 700 | 1.2 | |
+| Body | `1rem–1.125rem` | 400–500 | 1.5 | |
+| Small / meta | `0.8125rem` | 500 | 1.4 | Uppercase eyebrows, tags |
+| Eyebrow label | `0.75rem` | 700 | — | UPPERCASE, letter-spacing `0.08em` |
+
+**Rules**
+- Headings are **tight** (leading ≈ 1.0–1.15). Don't let them breathe like editorial type.
+- One font family for the whole site is fine and on-brand. Vary weight, not family.
+- Keep body copy readable — high contrast, generous line length limit (~65ch).
+
+---
+
+## 4. The Neobrutalist Primitives
+
+These three tokens define the look. Apply them consistently.
+
+### Border
+```css
+--border-width: 3px;          /* 2px small elements, 3–4px cards, up to 6px hero */
+--border: var(--border-width) solid var(--color-ink);
+--radius: 0px;                /* mostly square. Optional soft radius: 6–10px */
+--radius-pill: 999px;         /* for tags/badges only */
+```
+- Default corners are **square or barely rounded** (0–10px). Big soft radii break the style.
+- Pills (`999px`) are reserved for tags, small badges, and highlight "marker" shapes.
+
+### Solid offset shadow (the signature move)
+```css
+--shadow-sm: 3px 3px 0 0 var(--color-ink);
+--shadow:    5px 5px 0 0 var(--color-ink);
+--shadow-lg: 8px 8px 0 0 var(--color-ink);
+```
+- **No blur. No spread fade. No transparency.** Always a solid color offset down-right.
+- Shadow color is usually `--color-ink` (black), occasionally an accent for extra pop.
+- On hover, the element *presses in*: translate toward the shadow and shrink the shadow (see Motion).
+
+### Spacing
+```css
+--space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;
+--space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+--space-24: 96px;                 /* section vertical padding */
+```
+- Sections get generous vertical padding (`64–96px`).
+- Cards use `16–24px` internal padding.
+- Gaps in grids: `16–24px`.
+
+---
+
+## 5. Components
 
 ### Buttons
-- **Primary CTA:** `.button.is-primary.is-rounded` — bg `#ec1e24`, white text, fully rounded, semibold.
-- **Secondary:** `.button.is-outlined.is-rounded` — transparent, bordered, rounded, semibold.
-
-### Glassmorphism cards (service / about)
+```
+[ Primary ]  — accent fill · black border · solid shadow · black bold label
+[ Ghost ]    — white/dark fill · black border · solid shadow
+[ Provider ] — full-width, solid accent, icon + label (see login ref)
+```
 ```css
-background: rgba(0, 0, 0, 0.1);      /* about: 0.09 */
-padding: 30px;
-border-radius: 20px;                  /* service-card has no radius */
-backdrop-filter: blur(14px);
-border: 1px solid rgba(255,255,255,0.03);
-box-shadow: 0 0 10px rgba(0,0,0,0.14);
+.btn {
+  font-weight: 700;
+  padding: 12px 20px;
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: var(--color-accent-1);
+  color: var(--color-ink);
+  transition: transform .06s ease, box-shadow .06s ease;
+}
+.btn:hover  { transform: translate(2px, 2px); box-shadow: var(--shadow-sm); }
+.btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0 0 var(--color-ink); }
 ```
 
-### Pill tabs (`.cs-tabs`)
-Inline rounded-full pills (`border-radius:50px`), translucent border, muted white text. Active state: red (`#ec1e24`) background + white text. Grow in padding/size at 769px and 1280px.
+### Cards
+- Solid border + solid shadow, square-ish corners.
+- On dark sections: `--color-surface` fill, sometimes borderless with just spacing (see discover grid); on light sections: white fill with full border + shadow.
+- Card grids are dense and uniform — a strong, obvious grid (see discover/features refs).
 
-### Carousel controls (`.tns-controls`)
-Hidden below 1024px. Prev/next arrows are transparent buttons positioned ±3rem outside the track, drawing Material Icons `arrow_back_ios` / `arrow_forward_ios` via `::after content`. Hover → `opacity:0.8`.
+### Tags / Badges / Stickers
+- Small pill or square chips with border. Accent fills.
+- **Stickers**: rotated `-4°` to `+6°`, solid shadow, often overlapping a corner of a card or hero. Used sparingly for playfulness.
 
-## Motion & Effects
+### Highlight "marker" shape
+- The rounded solid-color blob behind a phrase (yellow pill behind text in the home ref). Use `--radius-pill` fill behind key words in headings.
 
-- **Bouncy hover** on brand/logo: `transition: cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s; transform: scale(1.05)`.
-- **Service icon zoom:** `scale(1.1)` on card hover with the same bouncy easing.
-- **Drop shadows** on hero text for legibility over imagery.
-- **Text-stroke outline** technique for the layered "Gaming" hero word.
+### Inputs (see login ref)
+```css
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--color-bg-dark);   /* or white on light sections */
+  color: var(--color-bg-light);
+}
+.input:focus { outline: none; box-shadow: var(--shadow-sm); }
+```
+- Full-width, tall, hard border. Labels sit above, bold, small.
 
-## Responsive Breakpoints (observed)
+### Navbar
+- Slim top bar, dark. Bold wordmark left, text links, one accent CTA button right (see gumclaw ref).
+- Links plain; the single filled accent button anchors the right side.
 
-`640px` · `690px` (mobile clamps) · `768/769px` · `870px` · `1024px` (nav + carousel arrows appear, 100px fixed-nav padding) · `1215px` · `1280px` · `1360/1366px` · `1408px` (container → 1690px) · `1690px` (max hero scale + type sizes).
+### Footer
+- Dark, generous. A bright accent "subscribe" panel above or inside it, bordered input + arrow button. Multi-column link lists, social icons row.
 
-## Takeaways for a Redesign
+---
 
-- One saturated accent (`#ec1e24`) against near-black + white does the heavy lifting — keep accent usage disciplined (CTAs, active states, bullets, icon tints only).
-- Oversized 800–900 weight display type is the signature; pair with light (300) body copy.
-- Glassmorphism (`backdrop-filter: blur`) + rounded corners (20px / 1.5rem) define the card language.
-- Depth comes from full-bleed dark background photos per section plus floating, rotated, shadowed imagery — not from flat fills.
+## 6. Layout & Page Rhythm
+
+- **Max content width:** ~1200px, centered, with comfortable side gutters.
+- **Section rhythm:** alternate dark sections and full-bleed accent-color sections down the page. This alternation *is* the layout personality (see home + features refs).
+- **Full-bleed color panels:** a whole section is one flat accent color, edge to edge, with black-outlined content inside.
+- **Grids:** obvious, uniform, dense (2–4 cols). Don't stagger or offset — brutalism likes the visible grid.
+- **Illustrations/characters:** flat, bold-outlined, sit in colored panels or as spot art. (For a gaming cafe: controllers, arcade shapes, pixel/character motifs in the same flat-outline style.)
+
+---
+
+## 7. Motion
+
+Keep it **snappy and physical**, never smooth-and-slow.
+
+- **Hover press:** button/card translates `+2–5px` down-right and its shadow shrinks to match — like physically pressing a stamp.
+- Durations short: `60–120ms`, `ease` or `ease-out`.
+- Optional: slight sticker wobble/rotate on hover for playful elements.
+- Avoid fades, parallax drift, and long easing. Motion should feel clicky, not silky.
+
+---
+
+## 8. Do / Don't
+
+**Do**
+- Outline everything meaningful in solid black.
+- Use hard, solid, offset shadows.
+- Go big and tight on headings.
+- Alternate dark and vivid full-bleed sections.
+- Keep the grid visible and uniform.
+- Add a few rotated stickers/badges for character.
+
+**Don't**
+- Use gradients, blurred/soft shadows, or glassmorphism.
+- Use large soft border-radii on cards.
+- Use gray text on color — go black.
+- Over-animate or use slow fades.
+- Let the layout get timid or "clean-corporate."
+
+---
+
+## 9. Token Quick-Reference (CSS variables)
+
+```css
+:root {
+  /* Kai dark palette (v2) */
+  --color-bg:      #1A1E24;  /* Shark — page background */
+  --color-bg-deep: #14171C;  /* deeper sections */
+  --color-surface: #22272F;  /* cards on dark */
+  --color-line:    #313842;  /* subtle light border on dark */
+  --color-ink:     #0C0E12;  /* near-black — hard shadows */
+  --color-text:    #F2F3F5;  /* near-white body text */
+  --color-muted:   #A9ADB4;  /* secondary text */
+
+  /* accent (from logo) */
+  --color-red:      #C0392B;  /* logo red — primary CTA/accent */
+  --color-red-soft: #C38684;  /* Old Rose — hover tints */
+  --color-gray-1:   #787A7C;  /* Rolling Stone */
+  --color-gray-2:   #84847C;  /* Friar Gray */
+
+  /* primitives */
+  --border-width: 3px;
+  --border: var(--border-width) solid var(--color-ink);
+  --radius: 0px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 3px 3px 0 0 var(--color-ink);
+  --shadow:    5px 5px 0 0 var(--color-ink);
+  --shadow-lg: 8px 8px 0 0 var(--color-ink);
+
+  /* spacing */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+  --space-24: 96px;
+}
+```

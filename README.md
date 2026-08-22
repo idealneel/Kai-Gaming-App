@@ -1,32 +1,82 @@
-# React + TypeScript + Vite
+# Kai Gaming
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A full-stack PS5 gaming cafe booking platform for "Kai Gaming" in Ambernath. Features online booking with live station status, admin panel with Google authentication, Discord notifications, and a neobrutalist design system.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** with TypeScript
+- **Vite 8** for development and builds
+- **Tailwind CSS v3** with custom neobrutalist design tokens
+- **React Router v7** for navigation
+- **Firebase** (Firestore + Auth + Functions) for backend
+- **Lucide React** for icons
+- **Oxlint** for linting
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Online booking with time-slot selection
+- Live station status (open/closed/full)
+- Admin panel with Google authentication (Calendar, Stations, Bookings, Discord, Settings tabs)
+- Discord webhook notifications on new bookings
+- Pricing page with tier comparison
+- Gallery with circular carousel
+- About page with team info
+- Contact page with form
+- Privacy policy and 404 pages
+- Neobrutalist dark design system
+- Scroll-reveal animations with custom hooks
+- Responsive layout
 
-## Expanding the Oxlint configuration
+## Getting Started
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.example .env   # Fill in Firebase credentials and Discord webhook URL
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Firebase Functions
+
+```bash
+cd functions && npm run build
+firebase deploy --only functions
+firebase deploy --only firestore:rules
+```
+
+## Project Structure
+
+```
+src/
+├── components/       # Reusable UI components
+├── contexts/         # React contexts (AuthContext)
+├── data/             # Content data files
+├── firebase/         # Firebase config and abstractions
+├── hooks/            # Custom hooks (useInView, useTilt, useCounter, useSettings)
+├── pages/            # Route pages (Home, Book, Pricing, Gallery, Admin, etc.)
+└── index.css         # Global styles and neobrutalist utilities
+functions/
+└── src/index.ts      # Firebase Functions (Discord notification on booking)
+```
+
+## Design System
+
+Neobrutalist style with custom tokens:
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `kai-dark` | `#1A1E24` | Page background |
+| `kai-deeper` | `#14171C` | Navbar/admin header |
+| `kai-surface` | `#22272F` | Cards |
+| `kai-ink` | `#0C0E12` | Borders/shadows |
+| `kai-red` | `#C0392B` | Accent/CTA |
+
+## Deployment
+
+Deployed on Vercel. Push to `master` to trigger automatic deployments.
