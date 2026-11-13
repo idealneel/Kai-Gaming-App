@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, User, AlertCircle, Gamepad2 } from 'lucide-react';
-import { createBooking, subscribeToStations, getBusySlots, isSlotBusy, TIME_SLOTS, type Station } from '../firebase/bookings';
+import { createBooking, subscribeToStations, TIME_SLOTS, toDateKey, type Station } from '../firebase/bookings';
 import { useSettings } from '../hooks/useSettings';
 import { useInView } from '../hooks/useInView';
 
@@ -23,29 +23,26 @@ export default function Booking() {
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
   const [stations, setStations] = useState<Station[]>([]);
+  const [stationsLoading, setStationsLoading] = useState(true);
+  const [stationsError, setStationsError] = useState(false);
   const [stepKey, setStepKey] = useState(0);
-  const [busySlots, setBusySlots] = useState<Map<string, string[]>>(new Map());
-  const [vibrateSlot, setVibrateSlot] = useState('');
 
   const settings = useSettings();
   const [heroRef, heroInView] = useInView(0.1);
   const [flowRef] = useInView(0.1);
 
   useEffect(() => {
-    return subscribeToStations(setStations);
+    return subscribeToStations((loadedStations) => {
+      setStations(loadedStations);
+      setStationsLoading(false);
+    }, () => setStationsError(true));
   }, []);
-
-  // Fetch busy slots when date changes
-  useEffect(() => {
-    if (!selectedDate) return;
-    getBusySlots(selectedDate).then(setBusySlots);
-  }, [selectedDate]);
 
   const dates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() + i);
     return {
-      value: date.toISOString().split('T')[0],
+      value: toDateKey(date),
       label: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
       isToday: i === 0,
     };
@@ -72,7 +69,7 @@ export default function Booking() {
         customerPhone: formData.phone,
         customerEmail: formData.email,
         game: selectedGame,
-      } as any);
+      });
       if (result.success) {
         goToStep('confirm');
       } else {
@@ -96,13 +93,8 @@ export default function Booking() {
     setStepKey(0);
   };
 
-  const handleBusyClick = (stationId: string, slot: string) => {
-    setVibrateSlot(`${stationId}-${slot}`);
-    if (navigator.vibrate) navigator.vibrate(200);
-    setTimeout(() => setVibrateSlot(''), 500);
-  };
-
   const phoneDigits = settings.whatsapp.replace(/[^0-9]/g, '');
+  const openStations = stations.filter((station) => station.status === 'open');
   const steps: Step[] = ['date', 'slot', 'game', 'form', 'confirm'];
 
   return (
@@ -114,7 +106,7 @@ export default function Booking() {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6 leading-[0.95]">
             BOOK YOUR <span className="text-kai-red">STATION</span>
           </h1>
-          <p className="text-kai-muted text-lg max-w-xl mx-auto">Pick a date, choose your time slot, select a game, and you're set.</p>
+          <p className="text-kai-muted text-lg max-w-xl mx-auto">Choose a date, station, time, and game. We'll confirm your booking request.</p>
         </div>
       </section>
 
@@ -151,36 +143,37 @@ export default function Booking() {
               </div>
             )}
 
-            {/* Step 2: Time Slot — with busy detection */}
+            {/* Step 2: Time Slot */}
             {step === 'slot' && (
               <div>
                 <h2 className="text-2xl font-black mb-2 flex items-center gap-2"><Clock size={24} className="text-kai-red" /> Choose Time Slot</h2>
                 <p className="text-kai-muted mb-6">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                <p className="text-sm text-kai-muted mb-6">Choose the time you would like to request. Your booking is pending until our team confirms it.</p>
                 <div className="space-y-6">
-                  {stations.filter((s) => s.status === 'open').map((station) => (
+                  {stationsError && (
+                    <div role="alert" className="card-neo p-4 border-kai-red bg-kai-red/10 text-sm text-kai-red">
+                      Live station status could not be loaded. Default stations are shown; contact us if your request cannot be submitted.
+                    </div>
+                  )}
+                  {stationsLoading && (
+                    <div role="status" className="card-neo p-6 text-center text-kai-muted">Loading stations…</div>
+                  )}
+                  {openStations.map((station) => (
                     <div key={station.id} className="card-neo p-6">
                       <h3 className="font-bold mb-4">{station.name}</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                        {TIME_SLOTS.map((slot) => {
-                          const busy = isSlotBusy(busySlots, station.id, slot);
-                          const vibrateKey = `${station.id}-${slot}`;
-                          const isVibrating = vibrateSlot === vibrateKey;
-                          return (
-                            <button key={slot} disabled={busy}
-                              onClick={() => busy ? handleBusyClick(station.id, slot) : (() => { setSelectedStation(station.id); setSelectedSlot(slot); goToStep('game'); })()}
-                              className={`px-3 py-2 text-xs font-bold border-3 border-kai-ink transition-all duration-100 ${
-                                busy
-                                  ? `bg-red-500/20 text-red-400 border-red-500/50 cursor-not-allowed ${isVibrating ? 'animate-[shake_0.3s_ease-in-out]' : ''}`
-                                  : 'bg-kai-dark text-kai-text hover:bg-kai-red hover:text-kai-ink hover:translate-x-[1px] hover:translate-y-[1px]'
-                              }`}>
-                              {busy ? 'BOOKED' : slot}
-                            </button>
-                          );
-                        })}
+                        {TIME_SLOTS.map((slot) => (
+                          <button key={slot}
+                            aria-label={`Request ${slot} at ${station.name}`}
+                            onClick={() => { setSelectedStation(station.id); setSelectedSlot(slot); goToStep('game'); }}
+                            className="px-3 py-2 text-xs font-bold border-3 border-kai-ink transition-all duration-100 bg-kai-dark text-kai-text hover:bg-kai-red hover:text-kai-ink hover:translate-x-[1px] hover:translate-y-[1px]">
+                            {slot}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   ))}
-                  {stations.filter((s) => s.status === 'open').length === 0 && (
+                  {!stationsLoading && openStations.length === 0 && (
                     <div className="card-neo p-8 text-center">
                       <AlertCircle size={48} className="text-kai-red mx-auto mb-4" />
                       <p className="text-kai-muted">No stations available right now.</p>

@@ -34,6 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsAdmin(!!user && ALLOWED_ADMIN_EMAILS.includes(user.email ?? ''));
@@ -43,10 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithGoogle = async () => {
+    if (!auth) {
+      throw new Error('Firebase is not configured. Add your Firebase web app settings to .env.');
+    }
     await signInWithPopup(auth, googleProvider);
   };
 
   const logout = async () => {
+    if (!auth) return;
     await signOut(auth);
   };
 

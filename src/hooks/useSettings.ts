@@ -22,6 +22,7 @@ export function useSettings(): SiteSettings {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULTS);
 
   useEffect(() => {
+    if (!db) return;
     const unsub = onSnapshot(doc(db, 'settings', 'site'), (snap) => {
       if (snap.exists()) {
         setSettings({ ...DEFAULTS, ...snap.data() } as SiteSettings);

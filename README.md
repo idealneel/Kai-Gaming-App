@@ -1,6 +1,6 @@
 # Kai Gaming
 
-A full-stack PS5 gaming cafe booking platform for "Kai Gaming" in Ambernath. Features online booking with live station status, admin panel with Google authentication, Discord notifications, and a neobrutalist design system.
+A PS5 gaming cafe website and booking-request app for Kai Gaming in Ambernath. Customers can request a station, date, time, and game; requests stay pending until an admin confirms them.
 
 ## Tech Stack
 
@@ -14,41 +14,62 @@ A full-stack PS5 gaming cafe booking platform for "Kai Gaming" in Ambernath. Fea
 
 ## Features
 
-- Online booking with time-slot selection
-- Live station status (open/closed/full)
-- Admin panel with Google authentication (Calendar, Stations, Bookings, Discord, Settings tabs)
-- Discord webhook notifications on new bookings
-- Pricing page with tier comparison
-- Gallery with circular carousel
-- About page with team info
-- Contact page with form
-- Privacy policy and 404 pages
-- Neobrutalist dark design system
-- Scroll-reveal animations with custom hooks
-- Responsive layout
+- Booking requests with date, time-slot, station, game, and customer details
+- Public station status and an admin panel with Google authentication (Calendar, Stations, Bookings, Discord, Settings)
+- Discord notifications when a booking request is created (optional webhook)
+- Pricing, about, contact, and privacy pages
+- Responsive neobrutalist dark design system
 
 ## Getting Started
 
+Use Node.js 20.19+ (or 22.12+) and npm.
+
+### 1. Configure Firebase
+
+Create a Firebase project and register a web app in the Firebase console. Enable **Cloud Firestore** and **Google** under Authentication > Sign-in method. Add `localhost` and your deployed site's domain under Authentication > Settings > Authorized domains.
+
+Copy the web app configuration into a local `.env` file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Set the six `VITE_FIREBASE_*` values from the Firebase web app configuration in `.env`. Deploy the included Firestore rules and indexes with the Firebase CLI:
+
+```bash
+npm install --global firebase-tools
+firebase login
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Only the admin emails listed in `src/contexts/AuthContext.tsx` and `firestore.rules` can manage stations, bookings, and settings. Add or remove admins in both places together.
+
+### 2. Install and run
+
 ```bash
 npm install
-cp .env.example .env   # Fill in Firebase credentials and Discord webhook URL
 npm run dev
 ```
 
-## Build
+Without Firebase settings the marketing pages can still be previewed, but the app will show a setup notice and booking submissions/admin sign-in will be unavailable. `VITE_DISCORD_WEBHOOK_URL` is optional for browser notifications. If you deploy the Firebase Function, its optional `DISCORD_WEBHOOK_URL` parameter enables server-side notifications; do not configure both to the same webhook or each booking may notify twice. Notification delivery never confirms a booking—admins confirm requests in the panel.
+
+### 3. Validate or preview a production build
 
 ```bash
+npm run lint
 npm run build
 npm run preview
 ```
 
-## Firebase Functions
+## Optional Firebase Function
 
 ```bash
-cd functions && npm run build
+npm --prefix functions install
+npm --prefix functions run build
 firebase deploy --only functions
-firebase deploy --only firestore:rules
 ```
+
+The function sends booking notifications when `DISCORD_WEBHOOK_URL` is configured. If no webhook is supplied, booking requests are still stored and remain pending for admin review.
 
 ## Project Structure
 
@@ -56,13 +77,12 @@ firebase deploy --only firestore:rules
 src/
 ├── components/       # Reusable UI components
 ├── contexts/         # React contexts (AuthContext)
-├── data/             # Content data files
 ├── firebase/         # Firebase config and abstractions
 ├── hooks/            # Custom hooks (useInView, useTilt, useCounter, useSettings)
-├── pages/            # Route pages (Home, Book, Pricing, Gallery, Admin, etc.)
+├── pages/            # Route pages (Home, About, Booking, Pricing, Contact, Admin, etc.)
 └── index.css         # Global styles and neobrutalist utilities
 functions/
-└── src/index.ts      # Firebase Functions (Discord notification on booking)
+└── src/index.ts      # Firestore-triggered Discord notification
 ```
 
 ## Design System
@@ -79,4 +99,4 @@ Neobrutalist style with custom tokens:
 
 ## Deployment
 
-Deployed on Vercel. Push to `master` to trigger automatic deployments.
+The site can be deployed to Vercel. Configure the `VITE_FIREBASE_*` values in the deployment environment before building; they are embedded into the client bundle at build time.

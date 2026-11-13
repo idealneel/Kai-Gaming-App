@@ -6,13 +6,14 @@ import {
   getDocs,
   updateDoc,
   deleteDoc,
+  setDoc,
   onSnapshot,
   query,
   orderBy,
   where,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from './config';
+import { db, requireFirestore } from './config';
 
 // ─── Types ───
 
@@ -56,21 +57,29 @@ export const DEFAULT_STATIONS: Omit<Station, 'id'>[] = [
   { name: 'PS5 Station 3', status: 'open', games: ['GTA 5', 'Ghost of Tsushima', 'The Last of Us'] },
 ];
 
+export function toDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // ─── Station Operations ───
 
 export async function getStations(): Promise<Station[]> {
+  if (!db) return DEFAULT_STATIONS.map((s, i) => ({ ...s, id: `station-${i + 1}` }));
+
   try {
     const snap = await getDocs(collection(db, 'stations'));
     if (snap.empty) {
-      // Seed default stations
-      for (const s of DEFAULT_STATIONS) {
-        await addDoc(collection(db, 'stations'), s);
+      // This operation is only effective for an authenticated admin.
+      for (const [index, station] of DEFAULT_STATIONS.entries()) {
+        await setDoc(doc(db, 'stations', `station-${index + 1}`), station);
       }
       return getStations();
     }
     return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Station));
   } catch {
-    // Fallback to defaults if Firestore unavailable
     return DEFAULT_STATIONS.map((s, i) => ({ ...s, id: `station-${i + 1}` }));
   }
 }
@@ -79,20 +88,29 @@ export async function updateStationStatus(
   stationId: string,
   status: 'open' | 'closed' | 'full'
 ): Promise<void> {
-  await updateDoc(doc(db, 'stations', stationId), { status });
+  await updateDoc(doc(requireFirestore(), 'stations', stationId), { status });
 }
 
-export function subscribeToStations(callback: (stations: Station[]) => void): () => void {
-  return onSnapshot(collection(db, 'stations'), async (snap) => {
+export function subscribeToStations(
+  callback: (stations: Station[]) => void,
+  onError?: (error: Error) => void,
+): () => void {
+  const fallbackStations = DEFAULT_STATIONS.map((s, i) => ({ ...s, id: `station-${i + 1}` }));
+  if (!db) {
+    callback(fallbackStations);
+    return () => {};
+  }
+
+  return onSnapshot(collection(db, 'stations'), (snap) => {
     if (snap.empty) {
-      // Seed default stations on first load
-      for (const s of DEFAULT_STATIONS) {
-        await addDoc(collection(db, 'stations'), s);
-      }
-      return; // The snapshot listener will fire again after seeding
+      callback(fallbackStations);
+      return;
     }
     const stations = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Station));
     callback(stations);
+  }, (error) => {
+    onError?.(error);
+    callback(fallbackStations);
   });
 }
 
@@ -117,6 +135,13 @@ async function sendDiscordEmbed(embed: object): Promise<boolean> {
 // ─── Booking Operations ───
 
 export async function createBooking(booking: BookingData): Promise<{ success: boolean; error?: string }> {
+  if (!db) {
+    return {
+      success: false,
+      error: 'Online booking is unavailable until Firebase is configured. Please contact Kai Gaming directly.',
+    };
+  }
+
   try {
     // Save to Firestore
     const docRef = await addDoc(collection(db, 'bookings'), {
@@ -166,7 +191,7 @@ export async function createBooking(booking: BookingData): Promise<{ success: bo
 }
 
 export async function getBookings(): Promise<BookingRecord[]> {
-  const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'));
+  const q = query(collection(requireFirestore(), 'bookings'), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as BookingRecord));
 }
@@ -175,15 +200,15 @@ export async function updateBookingStatus(
   bookingId: string,
   status: 'pending' | 'confirmed' | 'cancelled'
 ): Promise<void> {
-  await updateDoc(doc(db, 'bookings', bookingId), { status });
+  await updateDoc(doc(requireFirestore(), 'bookings', bookingId), { status });
 }
 
 export async function deleteBooking(bookingId: string): Promise<void> {
-  await deleteDoc(doc(db, 'bookings', bookingId));
+  await deleteDoc(doc(requireFirestore(), 'bookings', bookingId));
 }
 
 export async function getBookingsForDate(date: string): Promise<BookingRecord[]> {
-  const q = query(collection(db, 'bookings'), where('date', '==', date));
+  const q = query(collection(requireFirestore(), 'bookings'), where('date', '==', date));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as BookingRecord));
 }
@@ -206,7 +231,7 @@ export function isSlotBusy(busySlots: Map<string, string[]>, stationId: string, 
 }
 
 export function subscribeToBookingsForDate(date: string, callback: (bookings: BookingRecord[]) => void): () => void {
-  const q = query(collection(db, 'bookings'), where('date', '==', date));
+  const q = query(collection(requireFirestore(), 'bookings'), where('date', '==', date));
   return onSnapshot(q, (snap) => {
     const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BookingRecord));
     callback(bookings);

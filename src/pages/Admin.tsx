@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Settings, LogOut, Send, Power, PowerOff, CheckCircle, XCircle, MessageCircle, Calendar, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import {
-  updateStationStatus, subscribeToStations, getBookings, updateBookingStatus,
-  TIME_SLOTS, type Station, type BookingRecord,
+  updateStationStatus, subscribeToStations, getStations, getBookings, updateBookingStatus,
+  TIME_SLOTS, toDateKey, type Station, type BookingRecord,
 } from '../firebase/bookings';
 import { getSettings, saveSettings, type SiteSettings } from '../firebase/settings';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase/config';
+import { isFirebaseConfigured, requireFirestore } from '../firebase/config';
 import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
 const DISCORD_WEBHOOK_URL = import.meta.env.VITE_DISCORD_WEBHOOK_URL;
@@ -21,13 +21,13 @@ export default function Admin() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [calendarDate, setCalendarDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
+    return toDateKey(new Date());
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!isAdmin) return;
+    getStations().then(setStations);
     return subscribeToStations(setStations);
   }, [isAdmin]);
 
@@ -74,13 +74,13 @@ export default function Admin() {
   };
 
   const handleChangeStation = async (bookingId: string, newStationId: string) => {
-    await updateDoc(doc(db, 'bookings', bookingId), { stationId: newStationId });
+    await updateDoc(doc(requireFirestore(), 'bookings', bookingId), { stationId: newStationId });
     setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, stationId: newStationId } : b));
     showToast('Station updated');
   };
 
   const handleDeleteBooking = async (bookingId: string) => {
-    await deleteDoc(doc(db, 'bookings', bookingId));
+    await deleteDoc(doc(requireFirestore(), 'bookings', bookingId));
     setBookings((prev) => prev.filter((b) => b.id !== bookingId));
     showToast('Booking deleted');
   };
@@ -129,8 +129,8 @@ export default function Admin() {
   };
 
   const clearAllBookings = async () => {
-    const snap = await getDocs(collection(db, 'bookings'));
-    for (const d of snap.docs) { await deleteDoc(doc(db, 'bookings', d.id)); }
+    const snap = await getDocs(collection(requireFirestore(), 'bookings'));
+    for (const d of snap.docs) { await deleteDoc(doc(requireFirestore(), 'bookings', d.id)); }
     setBookings([]);
     showToast('All bookings cleared');
   };
@@ -138,10 +138,19 @@ export default function Admin() {
   // Calendar helpers
   const calDate = new Date(calendarDate + 'T00:00:00');
   const calendarBookings = bookings.filter((b) => b.date === calendarDate);
-  const prevDay = () => { const d = new Date(calendarDate + 'T00:00:00'); d.setDate(d.getDate() - 1); setCalendarDate(d.toISOString().split('T')[0]); };
-  const nextDay = () => { const d = new Date(calendarDate + 'T00:00:00'); d.setDate(d.getDate() + 1); setCalendarDate(d.toISOString().split('T')[0]); };
+  const prevDay = () => { const d = new Date(calendarDate + 'T00:00:00'); d.setDate(d.getDate() - 1); setCalendarDate(toDateKey(d)); };
+  const nextDay = () => { const d = new Date(calendarDate + 'T00:00:00'); d.setDate(d.getDate() + 1); setCalendarDate(toDateKey(d)); };
 
   if (authLoading) return <div className="min-h-screen bg-kai-dark flex items-center justify-center"><div className="text-kai-muted">Loading...</div></div>;
+
+  if (!isFirebaseConfigured) return (
+    <div className="min-h-screen bg-kai-dark flex items-center justify-center">
+      <div className="card-neo p-8 max-w-md w-full mx-4 text-center">
+        <h1 className="text-2xl font-black mb-4">FIREBASE SETUP REQUIRED</h1>
+        <p className="text-kai-muted">Add your Firebase web app settings to <code>.env</code> before using admin sign-in.</p>
+      </div>
+    </div>
+  );
 
   if (!user) return (
     <div className="min-h-screen bg-kai-dark flex items-center justify-center">
