@@ -4,7 +4,7 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
-const DISCORD_WEBHOOK_URL = defineString("DISCORD_WEBHOOK_URL");
+const DISCORD_WEBHOOK_URL = defineString("DISCORD_WEBHOOK_URL", { default: "" });
 
 interface BookingData {
   stationId: string;
@@ -69,10 +69,11 @@ export const onBookingCreated = onDocumentCreated(
 
     const sent = await sendDiscordEmbed(embed);
 
-    // Update booking status
+    // Notification delivery is not confirmation; the admin must confirm manually.
     if (event.data?.ref) {
       await event.data.ref.update({
-        status: sent ? "confirmed" : "pending",
+        status: "pending",
+        discordFailed: !sent,
       });
     }
   }

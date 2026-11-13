@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from './config';
+import { db, requireFirestore } from './config';
 
 export interface SiteSettings {
   phone: string;
@@ -15,8 +15,6 @@ export interface SiteSettings {
     openWorld: string;
   };
 }
-
-const SETTINGS_DOC = doc(db, 'settings', 'site');
 
 const DEFAULTS: SiteSettings = {
   phone: '+91 9730093803',
@@ -36,8 +34,13 @@ const DEFAULTS: SiteSettings = {
 let cachedSettings: SiteSettings | null = null;
 
 export async function getSettings(): Promise<SiteSettings> {
+  if (!db) {
+    cachedSettings = { ...DEFAULTS };
+    return cachedSettings;
+  }
+
   try {
-    const snap = await getDoc(SETTINGS_DOC);
+    const snap = await getDoc(doc(db, 'settings', 'site'));
     if (snap.exists()) {
       cachedSettings = { ...DEFAULTS, ...snap.data() } as SiteSettings;
       return cachedSettings;
@@ -54,6 +57,6 @@ export function getCachedSettings(): SiteSettings {
 }
 
 export async function saveSettings(settings: SiteSettings): Promise<void> {
-  await setDoc(SETTINGS_DOC, settings);
+  await setDoc(doc(requireFirestore(), 'settings', 'site'), settings);
   cachedSettings = settings;
 }
